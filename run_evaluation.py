@@ -6,6 +6,9 @@ from pathlib import Path
 import json
 from preprocessing.preprocess import Preprocess
 from metrics.evaluation import Evaluation
+from save.save_annotated import saveAll
+from tqdm import tqdm
+
 
 class EvaluateAll:
 
@@ -15,18 +18,20 @@ class EvaluateAll:
         with open('config.json') as config_file:
             config = json.load(config_file)
 
-        self.images_path = config['images_path']
-        self.annotations_path = config['annotations_path']
+        eval_config = config['evaluation']
+        self.images_path = eval_config['images_path']
+        self.annotations_path = eval_config['annotations_path']
+        self.output_path = eval_config['output_path']
 
     def get_annotations(self, annot_name):
-            with open(annot_name) as f:
-                lines = f.readlines()
-                annot = []
-                for line in lines:
-                    l_arr = line.split(" ")[1:5]
-                    l_arr = [int(i) for i in l_arr]
-                    annot.append(l_arr)
-            return annot
+        with open(annot_name) as f:
+            lines = f.readlines()
+            annot = []
+            for line in lines:
+                l_arr = line.split(" ")[1:5]
+                l_arr = [int(i) for i in l_arr]
+                annot.append(l_arr)
+        return annot
 
     def run_evaluation(self):
 
@@ -34,23 +39,24 @@ class EvaluateAll:
         iou_arr = []
         preprocess = Preprocess()
         eval = Evaluation()
-        
+
         # Change the following detector and/or add your detectors below
         import detectors.cascade_detector.detector as cascade_detector
         # import detectors.your_super_detector.detector as super_detector
         cascade_detector = cascade_detector.Detector()
-        
 
-        for im_name in im_list:
-            
+        for i in tqdm(range(len(im_list)), desc="Evaluating..."):
+            im_name = im_list[i]
             # Read an image
             img = cv2.imread(im_name)
 
             # Apply some preprocessing
-            img = preprocess.histogram_equlization_rgb(img) # This one makes VJ worse
-            
+            # img = preprocess.histogram_equlization_rgb(img) # This one makes VJ worse
+
             # Run the detector. It runs a list of all the detected bounding-boxes. In segmentor you only get a mask matrices, but use the iou_compute in the same way.
             prediction_list = cascade_detector.detect(img)
+
+            saveAll(img, prediction_list, self.output_path, "test_" + str(i))
 
             # Read annotations:
             annot_name = os.path.join(self.annotations_path, Path(os.path.basename(im_name)).stem) + '.txt'
@@ -58,7 +64,7 @@ class EvaluateAll:
 
             # Only for detection:
             p, gt = eval.prepare_for_detection(prediction_list, annot_list)
-            
+
             iou = eval.iou_compute(p, gt)
             iou_arr.append(iou)
 

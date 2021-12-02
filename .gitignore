@@ -1,1 +1,4 @@
 .idea
+outside
+output
+**/__pycache__/
