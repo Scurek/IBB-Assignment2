@@ -2,7 +2,7 @@
    "evaluation": {
         "images_path" : "data/ears/test",
         "annotations_path" : "data/ears/annotations/detection/test_YOLO_format",
-        "output_path" : "output/ears/"
+        "output_path" : "output/ears"
     },
     "training": {
         "images_path" : "data/ears/train",

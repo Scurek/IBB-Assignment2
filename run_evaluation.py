@@ -34,7 +34,7 @@ class EvaluateAll:
         return annot
 
     def run_evaluation(self):
-
+        LIMIT = -1
         im_list = sorted(glob.glob(self.images_path + '/*.png', recursive=True))
         iou_arr = []
         preprocess = Preprocess()
@@ -42,36 +42,61 @@ class EvaluateAll:
 
         # Change the following detector and/or add your detectors below
         import detectors.cascade_detector.detector as cascade_detector
+        import detectors.cascade_detector.detectorFace as face_detector
         # import detectors.your_super_detector.detector as super_detector
-        cascade_detector = cascade_detector.Detector()
 
-        for i in tqdm(range(len(im_list)), desc="Evaluating..."):
+        detectors = {
+            "cascade": {
+                "detector": cascade_detector.Detector(1.05, 1),
+                "predictions": [],
+                "iou_arr": [],
+                "types": [0, 0, 0]
+            },
+            # "cascadeFace": {
+            #     "detector": face_detector.Detector(1.05, 1),
+            #     "predictions": [],
+            #     "iou_arr": [],
+            #     "types": [0, 0, 0]
+            # }
+        }
+
+        # for i in tqdm(range(len(im_list)), desc="Evaluating..."):
+        for i in range(len(im_list)):
+            print(i)
+            if 0 < LIMIT < i:
+                break
             im_name = im_list[i]
             # Read an image
             img = cv2.imread(im_name)
 
             # Apply some preprocessing
             # img = preprocess.histogram_equlization_rgb(img) # This one makes VJ worse
-
-            # Run the detector. It runs a list of all the detected bounding-boxes. In segmentor you only get a mask matrices, but use the iou_compute in the same way.
-            prediction_list = cascade_detector.detect(img)
-
-            saveAll(img, prediction_list, self.output_path, "test_" + str(i))
+            # img = preprocess.grayscale(img)
+            # img = preprocess.automatic_brightness_and_contrast(img)
 
             # Read annotations:
             annot_name = os.path.join(self.annotations_path, Path(os.path.basename(im_name)).stem) + '.txt'
-            annot_list = self.get_annotations(annot_name)
+            annot_list = np.array(self.get_annotations(annot_name))
+            #
+            # saveAll(img, annot_list, self.output_path, "annotated" + "_" + str(i))
+            # continue
 
-            # Only for detection:
-            p, gt = eval.prepare_for_detection(prediction_list, annot_list)
+            # Run the detector. It runs a list of all the detected bounding-boxes. In segmentor you only get a mask matrices, but use the iou_compute in the same way.
+            for name, detector in detectors.items():
+                prediction_list = detector["detector"].detect(img)
+                saveAll(img, prediction_list, self.output_path, name + "_" + str(i))
+                p, gt = eval.prepare_for_detection(prediction_list, annot_list)
+                iou, class_type = eval.iou_compute(p, gt, 0.5)
+                detector["iou_arr"].append(iou)
+                detector["types"][class_type] += 1
 
-            iou = eval.iou_compute(p, gt)
-            iou_arr.append(iou)
 
-        miou = np.average(iou_arr)
-        print("\n")
-        print("Average IOU:", f"{miou:.2%}")
-        print("\n")
+        for name, detector in detectors.items():
+            miou = np.average(detector["iou_arr"])
+            print("\n")
+            print("(" + name + ") Average IOU:", f"{miou:.2%}")
+            print("(" + name + ") T:" + str(detector["types"]))
+            print("\n")
 
 
 if __name__ == '__main__':
