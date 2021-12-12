@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import cv2
 import numpy as np
 
@@ -45,4 +47,10 @@ class Evaluation:
         else:
             return iou, self.FP
 
-    # Add your own metrics here, such as mAP, class-weighted accuracy, ...
+    def compute_precision_recall(self, types):
+        tp = types[self.TP]
+        fp = types[self.FP]
+        fn = types[self.FN]
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        return precision, recall

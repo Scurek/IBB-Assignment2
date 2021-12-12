@@ -15,13 +15,13 @@ class Detector:
         self.scaleFactor = scale_factor
         self.min_neighbors = min_neighbors
 
-    def detect(self, img):
+    def detect(self, img, im_name):
         det_list_left = self.left_ear.detectMultiScale(img, self.scaleFactor, self.min_neighbors)
         det_list_right = self.right_ear.detectMultiScale(img, self.scaleFactor, self.min_neighbors)
-        print(det_list_right, det_list_left)
+        # print(det_list_right, det_list_left)
         if len(det_list_left) > 0 and len(det_list_right) > 0:
-            comb = np.concatenate((det_list_left, det_list_right))
-            print("comb", comb)
+            comb = np.concatenate((det_list_left, det_list_right), axis=0)
+            # print("comb", comb)
             return comb
         elif len(det_list_left) > 0:
             return det_list_left
