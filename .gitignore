@@ -2,3 +2,4 @@
 outside
 output
 **/__pycache__/
+*.png
